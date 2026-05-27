@@ -1,3 +1,14 @@
+const express = require('express');
+const app = express();
+
+app.get('/', (req, res) => {
+    res.send('🌑 The System is alive.');
+});
+
+app.listen(3000, () => {
+    console.log('🌑 Web server running.');
+});
+
 require('dotenv').config();
 
 const {
