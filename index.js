@@ -36,13 +36,88 @@ const client = new Client({
 // =========================
 
 const BOT_COMMAND_CHANNEL = '1508955661667537097';
+const HUNTER_RANK_CHANNEL = '1509120285457252384';
 
 // XP cooldown
 const cooldowns = new Map();
 
 client.once('clientReady', () => {
     console.log(`🌑 The System is online as ${client.user.tag}`);
+
+    updateHunterRanks();
+
+    // UPDATE EVERY 2 HOURS
+    setInterval(updateHunterRanks, 7200000);
 });
+
+
+// =========================
+// HUNTER RANK LIST SYSTEM
+// =========================
+
+async function updateHunterRanks() {
+
+    const guilds = client.guilds.cache;
+
+    guilds.forEach(async guild => {
+
+        const channel = guild.channels.cache.get(HUNTER_RANK_CHANNEL);
+
+        if (!channel) return;
+
+        const members = await guild.members.fetch();
+
+        const ranks = [
+            'Eternal Kage',
+            'Shadow Monarch',
+            'S-Rank',
+            'A-Rank',
+            'B-Rank',
+            'C-Rank'
+        ];
+
+        let output =
+`# 🌑 Hunter Association Rankings
+
+**The System has updated the hunter registry.**
+
+━━━━━━━━━━━━━━━
+`;
+
+        for (const rankName of ranks) {
+
+            const rankedMembers = members.filter(member =>
+                member.roles.cache.some(role =>
+                    role.name.includes(rankName)
+                )
+            );
+
+            if (rankedMembers.size > 0) {
+
+                output += `\n## ⚔️ ${rankName}\n`;
+
+                rankedMembers.forEach(member => {
+                    output += `• ${member.user.username}\n`;
+                });
+            }
+        }
+
+        output += `\n━━━━━━━━━━━━━━━
+🌑 **Next update in 2 hours.**`;
+
+        // DELETE OLD BOT MESSAGES
+        const messages = await channel.messages.fetch({ limit: 20 });
+
+        const botMessages = messages.filter(
+            m => m.author.id === client.user.id
+        );
+
+        await channel.bulkDelete(botMessages, true).catch(() => {});
+
+        // SEND NEW RANK LIST
+        channel.send(output);
+    });
+}
 
 
 // =========================
@@ -51,7 +126,6 @@ client.once('clientReady', () => {
 
 client.on('guildMemberAdd', async member => {
 
-    // GIVE E-RANK ONLY IF USER HAS NO RANK
     const alreadyRanked = member.roles.cache.some(role =>
         role.name.includes('Rank') ||
         role.name.includes('Monarch') ||
@@ -69,7 +143,6 @@ client.on('guildMemberAdd', async member => {
         }
     }
 
-    // WELCOME CHANNEL
     const channel = member.guild.channels.cache.find(
         c => c.name.includes('welcome')
     );
@@ -164,6 +237,92 @@ client.on('messageCreate', async message => {
                 warning.delete().catch(() => {});
             }, 3000);
         }
+
+        return;
+    }
+
+
+    // =========================
+    // LOCK COMMAND
+    // =========================
+
+    if (message.content.toLowerCase() === '!lock') {
+
+        const hasPermission =
+            message.member.roles.cache.some(r => r.name.includes('Kage')) ||
+            message.member.permissions.has(PermissionsBitField.Flags.Administrator);
+
+        if (!hasPermission) {
+
+            const warning = await message.reply(
+`⚠️ **Only Kages may use this command.**`
+            );
+
+            setTimeout(() => {
+                message.delete().catch(() => {});
+                warning.delete().catch(() => {});
+            }, 3000);
+
+            return;
+        }
+
+        await message.channel.permissionOverwrites.edit(
+            message.guild.roles.everyone,
+            {
+                SendMessages: false
+            }
+        );
+
+        const lockMessage = await message.channel.send(
+`🔒 **This channel has been locked by The System.**`
+        );
+
+        setTimeout(() => {
+            message.delete().catch(() => {});
+        }, 1000);
+
+        return;
+    }
+
+
+    // =========================
+    // UNLOCK COMMAND
+    // =========================
+
+    if (message.content.toLowerCase() === '!unlock') {
+
+        const hasPermission =
+            message.member.roles.cache.some(r => r.name.includes('Kage')) ||
+            message.member.permissions.has(PermissionsBitField.Flags.Administrator);
+
+        if (!hasPermission) {
+
+            const warning = await message.reply(
+`⚠️ **Only Kages may use this command.**`
+            );
+
+            setTimeout(() => {
+                message.delete().catch(() => {});
+                warning.delete().catch(() => {});
+            }, 3000);
+
+            return;
+        }
+
+        await message.channel.permissionOverwrites.edit(
+            message.guild.roles.everyone,
+            {
+                SendMessages: null
+            }
+        );
+
+        const unlockMessage = await message.channel.send(
+`🔓 **This channel has been unlocked by The System.**`
+        );
+
+        setTimeout(() => {
+            message.delete().catch(() => {});
+        }, 1000);
 
         return;
     }
