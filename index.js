@@ -1,15 +1,17 @@
+require('dotenv').config();
+
 const express = require('express');
 const app = express();
+
+const PORT = process.env.PORT || 3000;
 
 app.get('/', (req, res) => {
     res.send('🌑 The System is alive.');
 });
 
-app.listen(3000, () => {
-    console.log('🌑 Web server running.');
+app.listen(PORT, () => {
+    console.log(`🌑 Web server running on port ${PORT}`);
 });
-
-require('dotenv').config();
 
 const {
     Client,
@@ -31,6 +33,9 @@ const client = new Client({
 
 // XP COOLDOWN MAP
 const cooldowns = new Map();
+
+// BOT COMMAND CHANNEL ID
+const BOT_COMMAND_CHANNEL = '1508955661667537097';
 
 client.once('clientReady', () => {
     console.log(`🌑 The System is online as ${client.user.tag}`);
@@ -63,7 +68,7 @@ client.on('guildMemberAdd', async member => {
         c => c.name.includes('welcome')
     );
 
-    // SEND WELCOME MESSAGE + SOLO LEVELING GIF
+    // SEND WELCOME MESSAGE
     if (channel) {
 
         channel.send(
@@ -81,7 +86,7 @@ https://tenor.com/view/solo-leveling-我獨自升級-s2-gif-1128383619595271984`
 });
 
 
-// MESSAGE XP SYSTEM
+// MESSAGE SYSTEM
 client.on('messageCreate', async message => {
 
     if (message.author.bot) return;
@@ -93,24 +98,38 @@ client.on('messageCreate', async message => {
 
     if (message.content.startsWith('!clear')) {
 
-        // ONLY KAGES / ADMINS
         const hasPermission =
             message.member.roles.cache.some(r => r.name.includes('Kage')) ||
             message.member.permissions.has(PermissionsBitField.Flags.Administrator);
 
         if (!hasPermission) {
-            return message.reply(
-                '**⚠️ Only Kages can use this command.**'
+
+            const warning = await message.reply(
+`⚠️ **Only Kages may use this command.**`
             );
+
+            setTimeout(() => {
+                message.delete().catch(() => {});
+                warning.delete().catch(() => {});
+            }, 3000);
+
+            return;
         }
 
         const args = message.content.split(' ');
         const amount = parseInt(args[1]);
 
         if (!amount || amount < 1 || amount > 100) {
-            return message.reply(
-                '**⚠️ Choose a number between 1 and 100.**'
+
+            const warning = await message.reply(
+`⚠️ **Choose a number between 1 and 100.**`
             );
+
+            setTimeout(() => {
+                warning.delete().catch(() => {});
+            }, 3000);
+
+            return;
         }
 
         try {
@@ -118,7 +137,7 @@ client.on('messageCreate', async message => {
             await message.channel.bulkDelete(amount, true);
 
             const confirmMessage = await message.channel.send(
-                `🌑 **The System erased ${amount} messages.**`
+`🌑 **The System erased ${amount} messages.**`
             );
 
             setTimeout(() => {
@@ -129,17 +148,18 @@ client.on('messageCreate', async message => {
 
             console.log(error);
 
-            message.reply(
-                '**⚠️ The System failed to erase the messages.**'
+            const warning = await message.reply(
+`⚠️ **The System failed to erase the messages.**`
             );
+
+            setTimeout(() => {
+                warning.delete().catch(() => {});
+            }, 3000);
         }
 
         return;
     }
 
-
-    // BOT COMMAND CHANNEL
-    const isBotChannel = message.channel.name.includes('bot-commands');
 
     // LEVEL-UP CHANNEL
     const levelChannel = message.guild.channels.cache.find(
@@ -149,7 +169,7 @@ client.on('messageCreate', async message => {
     const userId = message.author.id;
 
     // XP COOLDOWN SYSTEM
-    const cooldownTime = 10000; // 10 seconds
+    const cooldownTime = 10000;
 
     if (cooldowns.has(userId)) {
 
@@ -157,7 +177,6 @@ client.on('messageCreate', async message => {
 
         if (Date.now() < expirationTime) {
 
-            // STILL ALLOW COMMANDS
             if (
                 message.content.toLowerCase() !== '!level' &&
                 message.content.toLowerCase() !== '!rank'
@@ -172,7 +191,7 @@ client.on('messageCreate', async message => {
     // GET XP
     let xp = await db.get(`xp_${userId}`) || 0;
 
-    // DETERMINE RANK FROM ACTUAL DISCORD ROLES
+    // DETERMINE RANK FROM ROLES
     let currentRank = 'Unranked Hunter';
 
     if (message.member.roles.cache.some(r => r.name.includes('Eternal Kage'))) {
@@ -218,10 +237,18 @@ client.on('messageCreate', async message => {
     // !LEVEL COMMAND
     if (message.content.toLowerCase() === '!level') {
 
-        if (!isBotChannel) {
-            return message.reply(
-                '**⚠️ Use commands inside 🧪│bot-commands.**'
+        if (message.channel.id !== BOT_COMMAND_CHANNEL) {
+
+            const warning = await message.reply(
+`⚠️ **Use commands inside <#1508955661667537097>.**`
             );
+
+            setTimeout(() => {
+                message.delete().catch(() => {});
+                warning.delete().catch(() => {});
+            }, 3000);
+
+            return;
         }
 
         let remainingXP = nextXP ? nextXP - xp : 0;
@@ -243,10 +270,18 @@ ${nextXP
     // !RANK COMMAND
     if (message.content.toLowerCase() === '!rank') {
 
-        if (!isBotChannel) {
-            return message.reply(
-                '**⚠️ Use commands inside 🧪│bot-commands.**'
+        if (message.channel.id !== BOT_COMMAND_CHANNEL) {
+
+            const warning = await message.reply(
+`⚠️ **Use commands inside <#1508955661667537097>.**`
             );
+
+            setTimeout(() => {
+                message.delete().catch(() => {});
+                warning.delete().catch(() => {});
+            }, 3000);
+
+            return;
         }
 
         return message.reply(
