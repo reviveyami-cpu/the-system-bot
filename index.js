@@ -31,21 +31,27 @@ const client = new Client({
     ]
 });
 
-// XP COOLDOWN MAP
-const cooldowns = new Map();
+// =========================
+// SETTINGS
+// =========================
 
-// BOT COMMAND CHANNEL ID
 const BOT_COMMAND_CHANNEL = '1508955661667537097';
+
+// XP cooldown
+const cooldowns = new Map();
 
 client.once('clientReady', () => {
     console.log(`🌑 The System is online as ${client.user.tag}`);
 });
 
 
-// NEW MEMBER JOIN
+// =========================
+// MEMBER JOIN
+// =========================
+
 client.on('guildMemberAdd', async member => {
 
-    // GIVE E-RANK ONLY IF USER HAS NO HUNTER RANK
+    // GIVE E-RANK ONLY IF USER HAS NO RANK
     const alreadyRanked = member.roles.cache.some(role =>
         role.name.includes('Rank') ||
         role.name.includes('Monarch') ||
@@ -63,12 +69,11 @@ client.on('guildMemberAdd', async member => {
         }
     }
 
-    // FIND WELCOME CHANNEL
+    // WELCOME CHANNEL
     const channel = member.guild.channels.cache.find(
         c => c.name.includes('welcome')
     );
 
-    // SEND WELCOME MESSAGE
     if (channel) {
 
         channel.send(
@@ -78,15 +83,16 @@ Welcome ${member}.
 
 🌑 **The System recognizes your arrival.**
 
-**Enter the gates. Rise through the ranks.**
-
 https://tenor.com/view/solo-leveling-我獨自升級-s2-gif-1128383619595271984`
         );
     }
 });
 
 
+// =========================
 // MESSAGE SYSTEM
+// =========================
+
 client.on('messageCreate', async message => {
 
     if (message.author.bot) return;
@@ -126,6 +132,7 @@ client.on('messageCreate', async message => {
             );
 
             setTimeout(() => {
+                message.delete().catch(() => {});
                 warning.delete().catch(() => {});
             }, 3000);
 
@@ -153,6 +160,7 @@ client.on('messageCreate', async message => {
             );
 
             setTimeout(() => {
+                message.delete().catch(() => {});
                 warning.delete().catch(() => {});
             }, 3000);
         }
@@ -161,14 +169,16 @@ client.on('messageCreate', async message => {
     }
 
 
-    // LEVEL-UP CHANNEL
+    // =========================
+    // XP SYSTEM
+    // =========================
+
     const levelChannel = message.guild.channels.cache.find(
         c => c.name.includes('level-up')
     );
 
     const userId = message.author.id;
 
-    // XP COOLDOWN SYSTEM
     const cooldownTime = 10000;
 
     if (cooldowns.has(userId)) {
@@ -188,10 +198,12 @@ client.on('messageCreate', async message => {
 
     cooldowns.set(userId, Date.now());
 
-    // GET XP
     let xp = await db.get(`xp_${userId}`) || 0;
 
-    // DETERMINE RANK FROM ROLES
+    // =========================
+    // RANK DETECTION
+    // =========================
+
     let currentRank = 'Unranked Hunter';
 
     if (message.member.roles.cache.some(r => r.name.includes('Eternal Kage'))) {
@@ -219,7 +231,10 @@ client.on('messageCreate', async message => {
         currentRank = '🔰 E-Rank Hunter';
     }
 
+    // =========================
     // NEXT RANK
+    // =========================
+
     let nextRank = '🏹 D-Rank Hunter';
     let nextXP = 250;
 
@@ -234,7 +249,10 @@ client.on('messageCreate', async message => {
     }
 
 
-    // !LEVEL COMMAND
+    // =========================
+    // LEVEL COMMAND
+    // =========================
+
     if (message.content.toLowerCase() === '!level') {
 
         if (message.channel.id !== BOT_COMMAND_CHANNEL) {
@@ -267,7 +285,10 @@ ${nextXP
     }
 
 
-    // !RANK COMMAND
+    // =========================
+    // RANK COMMAND
+    // =========================
+
     if (message.content.toLowerCase() === '!rank') {
 
         if (message.channel.id !== BOT_COMMAND_CHANNEL) {
@@ -294,15 +315,23 @@ ${nextXP
     }
 
 
+    // =========================
     // ADD XP
+    // =========================
+
     xp += 5;
 
     await db.set(`xp_${userId}`, xp);
 
 
+    // =========================
     // D-RANK PROMOTION
-    if (xp >= 250 &&
-        message.member.roles.cache.some(r => r.name.includes('E-Rank'))) {
+    // =========================
+
+    if (
+        xp >= 250 &&
+        message.member.roles.cache.some(r => r.name.includes('E-Rank'))
+    ) {
 
         const role = message.guild.roles.cache.find(
             r => r.name === '🏹 D-Rank Hunter'
@@ -313,6 +342,7 @@ ${nextXP
             await message.member.roles.add(role);
 
             if (levelChannel) {
+
                 levelChannel.send(
 `📈 **${message.author} has advanced to 🏹 D-Rank Hunter.**
 
@@ -323,9 +353,14 @@ ${nextXP
     }
 
 
+    // =========================
     // C-RANK PROMOTION
-    if (xp >= 800 &&
-        message.member.roles.cache.some(r => r.name.includes('D-Rank'))) {
+    // =========================
+
+    if (
+        xp >= 800 &&
+        message.member.roles.cache.some(r => r.name.includes('D-Rank'))
+    ) {
 
         const role = message.guild.roles.cache.find(
             r => r.name === '🗡️ C-Rank Hunter'
@@ -336,6 +371,7 @@ ${nextXP
             await message.member.roles.add(role);
 
             if (levelChannel) {
+
                 levelChannel.send(
 `🌑 **${message.author} has awakened as a 🗡️ C-Rank Hunter.**
 
