@@ -42,6 +42,7 @@ const HUNTER_RANK_CHANNEL = '1509120285457252384';
 const cooldowns = new Map();
 
 client.once('clientReady', () => {
+
     console.log(`🌑 The System is online as ${client.user.tag}`);
 
     updateHunterRanks();
@@ -273,7 +274,7 @@ client.on('messageCreate', async message => {
             }
         );
 
-        const lockMessage = await message.channel.send(
+        await message.channel.send(
 `🔒 **This channel has been locked by The System.**`
         );
 
@@ -316,7 +317,7 @@ client.on('messageCreate', async message => {
             }
         );
 
-        const unlockMessage = await message.channel.send(
+        await message.channel.send(
 `🔓 **This channel has been unlocked by The System.**`
         );
 
@@ -403,7 +404,7 @@ client.on('messageCreate', async message => {
     }
 
     if (xp >= 800) {
-        nextRank = '⚔️ Manual Hunter Evaluation';
+        nextRank = '🌑 Awakened Hunter';
         nextXP = null;
     }
 
@@ -428,6 +429,10 @@ client.on('messageCreate', async message => {
             return;
         }
 
+        const awakened = message.member.roles.cache.some(
+            r => r.name.includes('Awakened')
+        );
+
         let remainingXP = nextXP ? nextXP - xp : 0;
 
         return message.reply(
@@ -437,9 +442,9 @@ client.on('messageCreate', async message => {
 
 🏆 **Current Rank:** ${currentRank}
 
-${nextXP
-? `🔥 **XP Until ${nextRank}:** ${remainingXP}`
-: '👑 **You have reached the highest automatic rank.**'}`
+${awakened
+? '🌑 **Status:** Awakened Hunter'
+: `🔥 **XP Until ${nextRank}:** ${remainingXP}`}`
         );
     }
 
@@ -492,13 +497,21 @@ ${nextXP
         message.member.roles.cache.some(r => r.name.includes('E-Rank'))
     ) {
 
-        const role = message.guild.roles.cache.find(
+        const oldRole = message.guild.roles.cache.find(
+            r => r.name === '🔰 E-Rank Hunter'
+        );
+
+        const newRole = message.guild.roles.cache.find(
             r => r.name === '🏹 D-Rank Hunter'
         );
 
-        if (role && !message.member.roles.cache.has(role.id)) {
+        if (newRole && !message.member.roles.cache.has(newRole.id)) {
 
-            await message.member.roles.add(role);
+            if (oldRole) {
+                await message.member.roles.remove(oldRole);
+            }
+
+            await message.member.roles.add(newRole);
 
             if (levelChannel) {
 
@@ -521,20 +534,40 @@ ${nextXP
         message.member.roles.cache.some(r => r.name.includes('D-Rank'))
     ) {
 
-        const role = message.guild.roles.cache.find(
+        const oldRole = message.guild.roles.cache.find(
+            r => r.name === '🏹 D-Rank Hunter'
+        );
+
+        const cRankRole = message.guild.roles.cache.find(
             r => r.name === '🗡️ C-Rank Hunter'
         );
 
-        if (role && !message.member.roles.cache.has(role.id)) {
+        const awakenedRole = message.guild.roles.cache.find(
+            r => r.name.includes('Awakened')
+        );
 
-            await message.member.roles.add(role);
+        if (cRankRole && !message.member.roles.cache.has(cRankRole.id)) {
+
+            if (oldRole) {
+                await message.member.roles.remove(oldRole);
+            }
+
+            await message.member.roles.add(cRankRole);
+
+            if (awakenedRole) {
+                await message.member.roles.add(awakenedRole);
+            }
 
             if (levelChannel) {
 
                 levelChannel.send(
-`🌑 **${message.author} has awakened as a 🗡️ C-Rank Hunter.**
+`# 🌑 AWAKENING DETECTED
 
-⚔️ **A powerful presence has emerged within the Association.**`
+⚔️ ${message.author} has awakened as a 🗡️ C-Rank Hunter.
+
+🌑 **The System recognizes a newly Awakened Hunter.**
+
+https://tenor.com/view/dragon-ball-dragon-ball-super-goku-goku-ultra-instinct-ui-gif-10017138207648182009`
                 );
             }
         }
